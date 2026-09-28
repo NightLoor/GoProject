@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "devices": [
+    {
+      "name": "opcda_server_1",
+      "prog_id": "Kepware.KEPServerEX.V6",
+      "node": "localhost",
+      "timeout_ms": 10000,
+      "reconnect_interval_ms": 5000,
+      "group_name": "GoMonitor"
+    }
+  ]
+}

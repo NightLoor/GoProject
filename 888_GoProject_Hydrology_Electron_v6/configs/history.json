@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "sample_interval_minutes": 1,
+  "retention_days": 730,
+  "archive_enabled": true,
+  "archive_dir": "data/archive",
+  "archive_retention_days": 3650,
+  "cleanup_interval_hours": 24,
+  "query_max_points": 2000
+}
