@@ -1,98 +1,136 @@
-# 水利监测系统（Electron v6）
+# 水利监测系统（Go + Vue 3 + Electron）
 
-基于 **Go、Gin、Vue 3、SQLite 与 Electron** 的水利监测应用。后端统一管理 Modbus TCP 和 OPC DA 采集、实时点位、历史数据及报警；Vue 提供 Web 监控界面，Electron 提供 Windows 桌面运行入口。
+面向水雨情与渗压监测的桌面及 Web 应用。Go 后端通过 Modbus TCP、OPC DA 采集点位数据，提供 Gin HTTP API 和 SQLite 历史/报警存储；Vue 3 + Vite 实现监控界面；Electron 提供 Windows 桌面入口。
 
-> 本文根据当前仓库代码和配置整理。现场 OPC DA / Kepware 连接、Windows 安装包运行和设备写入仍需在目标环境验证。
+> 现场设备通信及 Windows 安装包需要在目标环境验证。OPC DA 需要 Windows 和可访问的 OPC DA Server（当前配置使用 Kepware）。
 
-## 功能概览
+## 功能
 
-- 通过配置启用 Modbus TCP、OPC DA 驱动，并以统一点位模型管理采集数据。
-- 通过 HTTP API 查询健康状态、配置、实时点位、设备状态、历史数据、事件与报警。
-- 将启用历史记录的点位采样写入 SQLite；支持保留、归档和查询点数配置。
-- 从 `Alarm.csv` 加载报警配置，并通过 API 查询报警、报警历史和更新配置。
-- 支持可写点位写入接口。
-- Vue 3 + Vite 前端支持开发服务器和后端静态托管。
-- Electron 启动时检查本机 API，并尝试启动随应用提供的 Go 后端程序。
+- Modbus TCP 与 OPC DA 两种采集驱动可独立启用，点位统一配置在 `configs/Tags.csv`。
+- 实时查看三个站点的水位、降雨量、渗压点位和设备状态。
+- 查看设备变量报警、活动报警、报警事件及历史报警记录；报警规则可由前端编辑并保存。
+- 查询 SQLite 历史数据，按站点、变量类型、点位和日期范围查看趋势与采样明细。
+- 对标记为可写的点位执行写入。
+- 通过 Gin 提供 REST API，并可托管前端构建产物；Electron 可启动本地 Go 服务并加载 Vue 页面。
 
-## 架构
+## 系统结构
 
 ```text
-Vue 3（浏览器 / Electron）
+Vue 3 Web / Electron 界面
           │ HTTP / JSON
           ▼
       Gin REST API
           │
           ▼
- Monitor Service ── IO Manager
+   Monitor Service ── IO Manager
       │                    │
-      ├─ Modbus TCP         ├─ 实时点位与报警
-      └─ OPC DA             └─ SQLite 历史存储
+      ├─ Modbus TCP         ├─ 实时点位、质量、报警和事件
+      └─ OPC DA             └─ SQLite 历史存储与维护
                                   │
-                         data/history.db
+                           data/history.db
 ```
 
-## 目录结构
+## 目录
 
 ```text
 GoProject/
-├── cmd/server/       # Go 服务入口
+├── cmd/server/             # 后端入口
 ├── internal/
-│   ├── api/          # Gin 路由、HTTP Handler、前端静态托管
-│   ├── config/       # JSON / CSV 配置加载与校验
-│   ├── driver/       # 多驱动组合
-│   ├── history/      # SQLite 历史存储与维护
-│   ├── io/           # 实时点位、历史策略和报警状态
-│   ├── modbus/       # Modbus TCP 驱动
-│   ├── opcda/        # OPC DA 驱动
-│   ├── model/        # 配置及数据模型
-│   └── service/      # 监控业务服务
-├── configs/          # Modbus、OPC DA、点位、报警、历史配置
-├── frontend/         # Vue 3 + Vite 前端
-├── electron/         # Electron 主进程、preload、打包配置
-├── bin/              # Electron 启动时查找的后端可执行文件
-├── data/             # SQLite 数据库及归档目录
+│   ├── api/                 # Gin 路由和 HTTP Handler
+│   ├── config/              # JSON/CSV 加载、校验与保存
+│   ├── driver/              # 驱动接口及组合
+│   ├── history/              # SQLite 历史与维护
+│   ├── io/                   # 实时点位、历史采样和报警状态
+│   ├── modbus/               # Modbus TCP 驱动
+│   ├── opcda/                # Windows OPC DA 驱动与非 Windows stub
+│   ├── model/                # 配置和数据模型
+│   └── service/              # 监控业务服务
+├── configs/                  # 设备、点位、报警和历史配置
+├── frontend/                 # Vue 3 + Vite 页面与组件
+├── electron/                 # Electron 主进程、preload 和打包配置
+├── bin/                      # Electron 查找 Go 后端可执行文件的位置
+├── data/                     # SQLite 数据库与归档数据
 ├── go.mod
 └── README.md
 ```
 
-## 配置文件
+## 界面
 
-服务从项目根目录的 `configs/` 读取配置：
+前端使用 Vue Router Hash 模式，兼容 Electron 通过 `file://` 加载构建页面。默认进入水雨情监测。
 
-| 文件 | 用途 |
+- `#/water-rain`：坝仔（BZ）、淡塘（DT）、稻元（DY）站点的水位、降雨和趋势。
+- `#/seepage`：每站 8 个渗压测点、单点趋势及统计信息。
+- `#/alarms`：报警规则、当前报警和事件记录。
+- `#/history`：按站点、变量类别、点位和日期范围查询历史数据。
+
+当前 Tags 点表有 38 个变量：8 个 Modbus 点和 30 个 OPC DA 点。每个站点配置 8 个渗压点、1 个水位点和 1 个降雨点。
+
+## 配置
+
+后端从仓库根目录的 `configs/` 加载以下文件：
+
+| 文件 | 内容 |
 |---|---|
-| `modbus.json` | Modbus TCP 启用状态、轮询周期、设备地址、超时和批量读取参数 |
-| `opcda.json` | OPC DA 启用状态、ProgID、节点、超时、重连周期和组名 |
-| `Tags.csv` | Modbus 与 OPC DA 点位定义，含地址、类型、读写权限、比例/偏移、描述及历史开关 |
-| `Alarm.csv` | 点位报警启用状态、报警值或上下限、单位和消息 |
-| `history.json` | 历史采样、数据保留、归档维护和查询点数设置 |
+| `modbus.json` | Modbus 启用开关、设备地址、轮询周期、超时与批量读取参数 |
+| `opcda.json` | OPC DA 启用开关、ProgID、节点、超时、重连周期和组名 |
+| `Tags.csv` | 两种协议共用的点位表：设备名、变量名、地址/ItemID、数据类型、读写权限、比例、偏移、字节序、说明和历史开关 |
+| `Alarm.csv` | 报警启用状态、布尔报警值或数值上下限、单位和消息 |
+| `history.json` | 历史采样开关、采样间隔、保留期、归档策略、清理周期和查询上限 |
 
-当前提交中的默认值：Modbus TCP 未启用；OPC DA 已启用，ProgID 为 `Kepware.KEPServerEX.V6`，连接节点为 `localhost`。历史存储已启用，采样间隔 1 分钟、保留期 730 天、归档已启用、单次查询上限 2000 点。实际运行行为以部署环境中的配置文件为准。
+`Tags.csv` 的 `device` 必须匹配相应 JSON 中配置的设备名；`tag_name` 应唯一。点位的 `history=true` 才会保存到历史库。只应将允许远程写入的变量标记为 `writable=true`。
 
-`Tags.csv` 中 `history=true` 的点位参与历史持久化；`false` 的点位不写历史。请确认 CSV 的点位名称、协议设备名称、类型和现场地址与设备配置匹配。只有确实允许远程写入的点位才应设置为可写。
+当前仓库默认配置：Modbus 关闭；OPC DA 开启，ProgID 为 `Kepware.KEPServerEX.V6`，节点为 `localhost`。这只是仓库配置，部署时应按实际设备修改。
 
-程序会在当前工作目录下使用 `data/history.db`，并按历史配置管理归档。部署时应确保该目录存在或可创建且对运行账户可写；Electron 安装后的可写路径需在目标机器验证。
+### OPC DA 环境
 
-## API
+OPC DA 基于 Windows COM/DCOM，不是 OPC UA，不使用 `opc.tcp://` Endpoint。`prog_id` 是 Windows OPC DA Server ProgID，`node` 是服务器主机名；远程服务器还需要配置 DCOM 权限和网络/RPC 通信。真实驱动仅在 Windows 构建，其他平台提供 stub，不模拟实际连接。
 
-默认监听 `http://localhost:8080`。
+## 历史数据
 
-| 方法 | 路径 | 说明 |
+- 主数据库：`data/history.db`；归档数据库默认位于 `data/archive/history_archive.db`。
+- 默认全局启用，每个启用历史的点位每分钟最多保存一条。
+- 主库保留 730 天；归档启用时迁移超期数据，归档数据保留 3650 天；维护默认每 24 小时运行。
+- 单点历史查询最多返回 2000 个点；超出时在数据库侧降采样并保留首尾点。
+- 历史页面和后端都限制日期范围不超过 10 个自然日，结束日期当天包含在结果中。
+- 数据库和归档路径相对于服务当前工作目录。运行账户需要对 `data/` 有创建和写入权限。
+
+以上为当前仓库 `configs/history.json` 中的默认值，可按部署需求调整。
+
+## 报警
+
+`configs/Alarm.csv` 的列为：
+
+```text
+tag,data_type,enabled,alarm_value,low,high,unit,message
+```
+
+- 布尔变量可设置 `alarm_value=true` 或 `false`；匹配该值时触发报警。
+- 整数/浮点变量使用 `low`、`high` 设定边界，可只启用其中一个。
+- 前端通过报警配置 API 保存后，后端校验并更新 IOManager 规则，无需重启服务。
+- 数值报警事件包括 `alarm_high`、`alarm_low`、`alarm_recovered`；布尔报警包括 `alarm_bool_true`、`alarm_bool_false`、`alarm_recovered`。
+- 活动报警状态由当前采集值计算。报警触发与恢复记录保存在 SQLite 的 `alarm_events` 表；通讯质量事件 `quality_bad`、`quality_recovered` 目前仅保存在运行期事件列表，不写入历史报警表。
+
+## HTTP API
+
+服务默认监听 `http://localhost:8080`，响应数据采用 JSON。
+
+| 方法 | 路径 | 用途 |
 |---|---|---|
-| GET | `/api/health` | 服务健康状态 |
-| GET | `/api/config` | 当前 Modbus、OPC DA 和点位配置 |
-| GET | `/api/io` | 查询全部实时点位 |
-| GET | `/api/io/:name` | 查询单个点位 |
-| GET | `/api/io/:name/history?limit=60` | 查询点位历史；也支持 `start_date`、`end_date` 参数 |
-| GET | `/api/devices` | 查询设备状态 |
-| GET | `/api/events?limit=50` | 查询报警/恢复事件 |
-| GET | `/api/alarm-history` | 查询报警历史；前端传入 `tag`、`start_date`、`end_date` |
-| GET | `/api/alarms` | 查询当前报警 |
-| GET | `/api/alarm-config` | 查询报警配置 |
-| POST | `/api/alarm-config` | 更新报警配置 |
-| POST | `/api/io/write` | 写入可写点位 |
+| GET | `/api/health` | 服务和设备连接概况 |
+| GET | `/api/config` | 当前配置 |
+| GET | `/api/io` | 全部实时点位 |
+| GET | `/api/io/:name` | 单个点位 |
+| GET | `/api/io/:name/history?limit=60` | 按样本数量查询历史（兼容查询） |
+| GET | `/api/io/:name/history?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` | 按日期查询历史，跨度最多 10 天 |
+| GET | `/api/devices` | 设备状态 |
+| GET | `/api/events?limit=50` | 报警/恢复和运行期事件 |
+| GET | `/api/alarms` | 当前活动报警 |
+| GET | `/api/alarm-history?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&tag=...` | 查询历史报警；`tag` 可选 |
+| GET | `/api/alarm-config` | 读取报警规则 |
+| POST | `/api/alarm-config` | 校验并保存报警规则 |
+| POST | `/api/io/write` | 写入允许写入的点位 |
 
-写入请求示例：
+写入示例：
 
 ```http
 POST /api/io/write
@@ -101,23 +139,23 @@ Content-Type: application/json
 {"tag":"Pump1_Run","value":true}
 ```
 
-具体可写点位取决于 `Tags.csv` 中的权限配置和驱动支持。写入前请确认目标设备、点位和数据值。
+请在真实设备环境中谨慎使用写入接口，并确认点位权限和值符合设备要求。
 
 ## 开发运行
 
-需要 Go（模块声明为 Go 1.25.0）、Node.js / npm；使用 OPC DA 时还需要 Windows 上可用的 OPC DA Server（当前配置示例为 Kepware）。
+需要 Go 1.25.0 或兼容版本、Node.js/npm。OPC DA 采集需要 Windows 及可用的 OPC DA Server。
 
-在仓库根目录运行：
+### 后端
 
-### 启动后端
+在仓库根目录启动：
 
 ```powershell
 go run ./cmd/server
 ```
 
-后端读取 `configs/` 下配置，默认监听 `:8080`。如果 `frontend/dist/index.html` 存在，Gin 同时提供前端页面。
+后端读取 `configs/` 下的 JSON/CSV，监听 `:8080`，并使用 `data/history.db`。如果存在 `frontend/dist/index.html`，后端也会托管 Vue 页面。
 
-### 启动 Vue 开发服务器
+### Vue 开发模式
 
 另开终端：
 
@@ -129,7 +167,7 @@ npm run dev
 
 打开 `http://localhost:5173`。Vite 将 `/api` 请求代理到 `http://localhost:8080`。
 
-### 构建 Web 前端
+### Web 构建
 
 ```powershell
 cd frontend
@@ -137,17 +175,13 @@ npm install
 npm run build
 ```
 
-构建结果位于 `frontend/dist/`。启动 Go 服务后可通过 `http://localhost:8080` 访问。
+构建文件输出到 `frontend/dist/`。之后启动 Go 服务，可访问 `http://localhost:8080`。
 
 ## Electron 桌面版
 
-Electron 主进程位于 `electron/main.cjs`，使用 `preload.cjs` 向渲染进程提供桌面端 API 地址。启动时它会：
+Electron 主进程位于 `electron/main.cjs`，隔离的 preload 在渲染进程暴露桌面 API 地址。启动时先检查 `localhost:8080/api/health`；如果没有已有后端，则尝试运行 `bin/server.exe` 或根目录的 `server.exe`，然后加载 `frontend/dist/index.html`。若页面尚未构建，会尝试开发服务器地址 `http://127.0.0.1:5173`。
 
-1. 检查 `http://localhost:8080/api/health`；若已有服务响应，则不再启动第二个后端。
-2. 否则查找 `bin/server.exe` 或项目根目录的 `server.exe` 并尝试启动。
-3. 加载 `frontend/dist/index.html`；若文件不存在，则尝试加载 Vite 开发地址 `http://127.0.0.1:5173` 并显示构建提示。
-
-在项目根目录构建前端和 Go 后端：
+先在仓库根目录构建前端与 Go 后端：
 
 ```powershell
 cd frontend
@@ -157,7 +191,7 @@ cd ..
 go build -o bin/server.exe ./cmd/server
 ```
 
-然后安装 Electron 依赖并启动：
+再启动 Electron：
 
 ```powershell
 cd electron
@@ -165,23 +199,14 @@ npm install
 npm start
 ```
 
-`electron/package.json` 定义了 `npm run dist` 打包脚本及 Windows NSIS 安装包目标。打包前应先完成前端构建和 Go 后端编译。请在实际安装包中确认 `frontend/dist`、`configs`、`bin/server.exe` 能被 Electron 正确定位，并验证数据库目录可写；开发目录下运行成功不等同于安装包已验证。
+打包脚本为 `npm run dist`，Windows 目标为 NSIS 安装包。electron-builder 配置列出了前端构建、配置、数据和后端目录；安装后仍需验证这些资源的实际位置、SQLite 可写路径及现场 OPC DA 连接。Electron 中若检测到本机已有可响应的 8080 服务，会使用该服务而不再启动自身后端。
 
-## 历史数据与报警
+## 常见问题
 
-- SQLite 数据库默认路径为 `data/history.db`，服务启动时打开数据库并启动维护任务。
-- `history.json` 控制历史采样开关、采样间隔、保留期、归档目录、清理周期和查询上限。
-- `Tags.csv` 的 `history` 字段控制点位是否写入历史库。
-- `Alarm.csv` 定义每个点位的报警配置；后端 API 提供报警、报警历史和配置读取/更新能力。
-- 前端历史接口支持按点位查询采样记录；报警历史接口支持按标签和日期范围查询。
-
-## 常见排查
-
-- **后端启动时报配置错误**：检查五个配置文件是否存在、CSV 表头和字段是否符合当前格式，以及设备/点位名称是否匹配。
-- **前端无法访问 API**：确认 Go 服务监听 `8080`；开发模式确认 Vite 使用 `5173`；Electron 模式检查启动日志和已有的 `localhost:8080` 服务。
-- **Electron 显示构建提示或空页面**：先执行 `npm run build`，确认 `frontend/dist/index.html` 存在。
-- **Modbus 无数据**：当前仓库默认关闭 Modbus；检查 `configs/modbus.json` 中启用状态、设备地址和网络连通性。
-- **OPC DA 无数据**：检查 Kepware ProgID、节点、OPC DA 服务状态及 Windows COM/DCOM 环境。
-- **历史记录未增长**：检查 `history.json` 的 `enabled`、点位 `history` 字段，以及 `data/` 目录的写权限。
-
+- **后端启动即退出**：检查五个配置文件是否存在、CSV 列名和字段是否正确，以及点位设备名是否匹配。
+- **Modbus 无数据**：仓库默认关闭 Modbus；检查 `configs/modbus.json` 的启用开关、IP/端口和网络连通性。
+- **OPC DA 无数据**：检查 Windows 环境、Kepware ProgID、节点、Server 状态以及 COM/DCOM 权限。
+- **前端访问不了 API**：确认后端监听 `8080`；开发模式确认 Vite 在 `5173`；Electron 查看主进程和后端日志。
+- **历史数据不增长**：检查 `history.json` 的 `enabled`、点位 `history` 开关和 `data/` 目录写权限。
+- **Electron 页面未加载**：先构建 `frontend/dist`，并检查打包后资源路径及后端可执行文件是否存在。
 
