@@ -56,3 +56,181 @@ body {
 input, select, textarea, button {
   font-size: 14px;
 }
+
+
+/* Hydrology dashboard theme: blue-white panels inspired by the supplied water-management screen */
+:root {
+  color-scheme: light;
+  --hydro-blue: #3478f6;
+  --hydro-blue-deep: #245fd2;
+  --hydro-blue-soft: #edf3ff;
+  --hydro-line: #e2eaf7;
+  --hydro-text: #172b4d;
+  --hydro-muted: #71819b;
+}
+html, body, #app { min-height: 100%; }
+body, .app-shell { background: #f2f6fd; color: var(--hydro-text); }
+.hydrology-topbar {
+  position: relative;
+  padding: 16px 30px;
+  background: linear-gradient(115deg, #2f6ce5 0%, #4f83f5 52%, #356ee7 100%);
+  box-shadow: 0 4px 14px rgba(47,108,229,.18);
+}
+.brand-mark {
+  border-radius: 12px;
+  background: rgba(255,255,255,.18);
+  border-color: rgba(255,255,255,.3);
+}
+.eyebrow { letter-spacing: .1em; }
+h1 { font-weight: 750; letter-spacing: .04em; }
+.station-bar {
+  background: rgba(255,255,255,.97);
+  border-bottom-color: #dfe8f7;
+  box-shadow: 0 2px 8px rgba(36,75,135,.04);
+}
+.station-tab {
+  border-color: #e1e9f8;
+  background: #f7f9ff;
+  color: #506481;
+  transition: .18s ease;
+}
+.station-tab span { background: #e8efff; color: var(--hydro-blue); }
+.station-tab.active, .station-tabs button.active {
+  color: #fff;
+  background: linear-gradient(135deg, #4b84fb, #2f6de7);
+  border-color: #3b75ed;
+  box-shadow: 0 4px 12px rgba(52,120,246,.2);
+}
+.sidebar {
+  background: #fff;
+  border-right-color: var(--hydro-line);
+}
+.sidebar-title { color: #91a1bb; letter-spacing: .1em; }
+.nav-item { border-radius: 8px; color: #526783; }
+.nav-item:hover, .nav-item.router-link-active {
+  background: #edf3ff;
+  color: var(--hydro-blue-deep);
+}
+.nav-icon { color: var(--hydro-blue); }
+.sidebar-status {
+  border-color: var(--hydro-line);
+  border-radius: 9px;
+  background: #f8faff;
+}
+.page-content { padding: 22px 24px 38px; }
+.page-heading h2 { color: #1e3763; font-weight: 750; }
+.muted, .station-bar-right { color: var(--hydro-muted); }
+.panel, .station-card, .summary-card, .metric-panel, .summary-panel,
+.pressure-card, .stat-card, .device-card, .history-kpi-grid article {
+  border-color: var(--hydro-line);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(44,82,145,.035);
+}
+.panel { box-shadow: 0 3px 12px rgba(44,82,145,.045); }
+.panel-title-row {
+  background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+  border-bottom-color: #e7edf8;
+}
+.panel-title-row h3, .summary-head h4 { color: #2f6de4; }
+.data-chip, .type-chip {
+  color: #326fe5;
+  background: #edf3ff;
+}
+.overview-banner, .hero-panel {
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(49,105,220,.12);
+}
+.overview-banner, .water-hero {
+  background: linear-gradient(120deg, #3977ed, #5a91ff);
+}
+.pressure-hero { background: linear-gradient(120deg, #3478e8, #58a5f4); }
+.station-card:hover, .station-card.active, .summary-card:hover {
+  border-color: #9dbbff;
+  box-shadow: 0 7px 18px rgba(52,120,246,.1);
+}
+.station-code { background: #edf3ff; color: #3478f6; }
+.station-values strong, .summary-panel b, .stat-card strong { color: #244a91; }
+.metric-panel.water-level, .metric-panel.rainfall {
+  background: linear-gradient(135deg, #f0f5ff, #fff 78%);
+}
+.metric-panel>strong, .tag-mini>strong, .history-kpi-grid article:first-child strong {
+  color: #3478f6;
+}
+.pressure-card.selected, .stage-chip.selected {
+  border-color: #94b6ff;
+  background: #f2f6ff;
+  box-shadow: 0 5px 15px rgba(52,120,246,.08);
+}
+.pressure-card>strong, .analysis-list strong { color: #2d66cb; }
+.stage-chip strong { color: #2f6de4; }
+.stage-chip { background: #f8faff; border-color: var(--hydro-line); }
+.tag-mini { background: #f9fbff; border-color: var(--hydro-line); }
+.line-chart { background: linear-gradient(#fbfcff,#f2f6ff); }
+.line-chart svg { color: #3478f6; }
+.chart-gridline { border-color: #e0e9fa; }
+table { border-collapse: separate; border-spacing: 0; }
+th, td { border-bottom-color: #e7edf7; }
+th {
+  background: #f6f8fe;
+  color: #6781b1;
+  font-weight: 750;
+  text-transform: none;
+  letter-spacing: 0;
+}
+tbody tr:hover { background: #f3f7ff; }
+.value { color: #2d5fbd; }
+.primary {
+  background: linear-gradient(135deg, #4a83f5, #2f6de7);
+  box-shadow: 0 3px 8px rgba(52,120,246,.12);
+}
+.primary:hover { filter: brightness(.97); }
+.secondary { background: #edf2fb; color: #506789; }
+.filters input:focus, .filters select:focus,
+.history-filter-grid select:focus, .history-filter-grid input:focus,
+.alarm-history-filter-grid select:focus, .alarm-history-filter-grid input:focus {
+  border-color: #8db0ff;
+  box-shadow: 0 0 0 3px rgba(52,120,246,.1);
+}
+.history-query-heading {
+  background: linear-gradient(180deg,#f7f9ff,#fff);
+  border-bottom-color: #e4ebf8;
+}
+.history-range-badge { border-color: #d8e5ff; background: #f3f7ff; }
+.history-range-badge strong { color: #326fe5; }
+.history-filter-grid select, .history-filter-grid input,
+.alarm-history-filter-grid select, .alarm-history-filter-grid input {
+  border-color: #dce5f5;
+  background: #fbfcff;
+}
+.alarm-banner, .history-hero {
+  border-color: #dfe8f8;
+  background: linear-gradient(135deg,#fff,#f4f7ff);
+  box-shadow: 0 4px 14px rgba(44,82,145,.045);
+}
+.alarm-banner code { background: #edf3ff; color: #326fe5; }
+.alarm-banner-status, .history-hero-value {
+  border-color: #e0e9f8;
+  border-radius: 9px;
+}
+.alarm-config-table tbody tr.alarm-row { background: #fff8f7; }
+@media (max-width: 1350px) {
+  .hydrology-topbar { padding: 14px 22px; }
+  .page-content { padding: 18px 18px 30px; }
+}
+@media (max-width: 760px) {
+  body { min-width: 0; }
+  .hydrology-topbar { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .top-actions { gap: 10px; flex-wrap: wrap; }
+  .station-bar { padding: 10px 14px; flex-wrap: wrap; }
+  .station-bar-right { display: none; }
+  .shell-body { min-height: calc(100vh - 100px); }
+  .sidebar { width: 64px; flex-basis: 64px; padding: 12px 6px; }
+  .sidebar-title, .nav-item span:not(.nav-icon), .sidebar-status { display: none; }
+  .nav-item { justify-content: center; padding: 11px 5px; }
+  .page-content { padding: 14px 10px 24px; }
+  .station-grid, .summary-grid, .dual-panel-grid, .water-card-grid { grid-template-columns: 1fr; }
+  .pressure-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .history-filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); padding: 14px; }
+  .history-filter-grid .wide, .history-filter-grid .history-point-field { grid-column: span 2; }
+}
